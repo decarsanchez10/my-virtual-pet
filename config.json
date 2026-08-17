@@ -1,0 +1,41 @@
+{
+  "groq_api_key": "PASTE_YOUR_GROQ_API_KEY_HERE",
+  "groq_model": "llama-3.1-8b-instant",
+  "pet_emoji": "🐣",
+  "pet_name": "Chirpy",
+  "check_interval_seconds": 30,
+
+  "daily_reminders": [
+    {
+      "id": "ojt_time_in",
+      "label": "OJT Time In",
+      "time": "08:00",
+      "days": ["mon", "tue", "wed", "thu", "fri"],
+      "message_hint": "remind me to time in for my OJT at CertiCode, keep it short and cute"
+    },
+    {
+      "id": "ojt_time_out",
+      "label": "OJT Time Out",
+      "time": "17:00",
+      "days": ["mon", "tue", "wed", "thu", "fri"],
+      "message_hint": "remind me to time out from my OJT at CertiCode, keep it short and cute"
+    },
+    {
+      "id": "water_break",
+      "label": "Water reminder",
+      "time": "14:00",
+      "days": ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
+      "message_hint": "remind me to drink water, keep it playful"
+    }
+  ],
+
+  "one_time_deadlines": [
+    {
+      "id": "example_deadline",
+      "label": "Example: Thesis Chapter 3",
+      "datetime": "2026-08-20 20:00",
+      "remind_before_minutes": [1440, 60],
+      "message_hint": "remind me my Thesis Chapter 3 is due soon, keep it encouraging"
+    }
+  ]
+}
