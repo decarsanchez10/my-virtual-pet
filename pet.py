@@ -230,31 +230,78 @@ class PetApp:
             except Exception:
                 pass
 
+        # Split text into Title and Message if it has double-newlines
+        title_text = "🕷️ Spider-Man"
+        message_text = text
+        if "\n\n" in text:
+            parts = text.split("\n\n", 1)
+            title_text = f"🕷️ {parts[0]}"
+            message_text = parts[1]
+
         px, py = self.root.winfo_x(), self.root.winfo_y()
         bubble = tk.Toplevel(self.root)
         bubble.overrideredirect(True)
         bubble.wm_attributes("-topmost", True)
-        bubble_w = 260
+        
+        bubble_w = 280
+        bubble_h = 130
         bx = px - bubble_w - 10 if px - bubble_w - 10 > 0 else px + self.pet_size + 10
         by = max(10, py - 10)
-        bubble.geometry(f"{bubble_w}x100+{bx}+{by}")
-        bubble.configure(bg="#fff7e6")
+        bubble.geometry(f"{bubble_w}x{bubble_h}+{bx}+{by}")
+        bubble.configure(bg="#0f0f12")
 
-        frame = tk.Frame(bubble, bg="#fff7e6", highlightbackground="#e0a800", highlightthickness=2)
+        # Force DWM rounded corners on Windows 11
+        try:
+            from ctypes import windll, byref, sizeof, c_int
+            bubble.update()
+            hwnd = windll.user32.GetParent(bubble.winfo_id())
+            windll.dwmapi.DwmSetWindowAttribute(
+                hwnd, 33, byref(c_int(2)), sizeof(c_int)
+            )
+        except Exception:
+            pass
+
+        # Modern Outer border frame
+        frame = tk.Frame(
+            bubble,
+            bg="#0f0f12",
+            highlightbackground="#ef4444",  # Spider-Man Red
+            highlightthickness=1,
+            bd=0
+        )
         frame.pack(fill="both", expand=True)
 
+        # Header Frame (for title)
+        header_frame = tk.Frame(frame, bg="#0f0f12")
+        header_frame.pack(fill="x", padx=12, pady=(10, 0))
+
+        # Title Label
+        title_lbl = tk.Label(
+            header_frame,
+            text=title_text,
+            font=("Segoe UI", 9, "bold"),
+            bg="#0f0f12",
+            fg="#f87171",  # Light red for modern contrast
+            anchor="w"
+        )
+        title_lbl.pack(side="left", fill="x")
+
+        # Divider line
+        divider = tk.Frame(frame, bg="#27272a", height=1)
+        divider.pack(fill="x", padx=12, pady=6)
+
+        # Message Label
         lbl = tk.Label(
             frame,
-            text=text,
-            wraplength=230,
+            text=message_text,
+            wraplength=250,
             justify="left",
-            bg="#fff7e6",
-            fg="#333333",
+            bg="#0f0f12",
+            fg="#e4e4e7",  # Zinc-200 readable text
             font=("Segoe UI", 10),
-            padx=10,
-            pady=10,
+            anchor="nw"
         )
-        lbl.pack(fill="both", expand=True)
+        lbl.pack(fill="both", expand=True, padx=12, pady=(0, 10))
 
         self.bubble = bubble
         # auto dismiss after 12 seconds
