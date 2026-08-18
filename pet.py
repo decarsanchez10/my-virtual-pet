@@ -22,10 +22,22 @@ import tkinter as tk
 from datetime import datetime, timedelta
 
 try:
+    import winsound
+except ImportError:
+    winsound = None
+
+try:
     import requests
 except ImportError:
     print("Missing dependency. Run: pip install requests")
     sys.exit(1)
+
+def play_notification_sound():
+    if winsound:
+        try:
+            winsound.PlaySound("SystemAsterisk", winsound.SND_ALIAS | winsound.SND_ASYNC)
+        except Exception as e:
+            print(f"[Sound error] {e}")
 
 CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
 STATE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "state.json")
@@ -250,10 +262,12 @@ class PetApp:
 
     def manual_greet(self):
         msg = generate_message(self.config, "give me a random cute check-in message", "Manual check-in")
+        play_notification_sound()
         self.root.after(0, lambda: self.show_bubble(msg))
 
     def fire_reminder(self, label, hint):
         msg = generate_message(self.config, hint, label)
+        play_notification_sound()
         self.root.after(0, lambda: self.show_bubble(f"{label}\n\n{msg}"))
 
     def scheduler_loop(self):
