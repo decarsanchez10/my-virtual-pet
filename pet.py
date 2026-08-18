@@ -117,8 +117,8 @@ class PetApp:
         self.config = config
         self.root = tk.Tk()
         
-        # Transparent key color (fuchsia avoids cutting out black outlines)
-        self.trans_color = "#ff00ff"
+        # Transparent key color (white)
+        self.trans_color = "white"
         self.root.overrideredirect(True)  # no window border
         self.root.wm_attributes("-topmost", True)
         self.root.wm_attributes("-transparentcolor", self.trans_color)
