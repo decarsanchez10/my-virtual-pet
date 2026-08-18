@@ -228,14 +228,14 @@ class PetApp:
         self.root.after(1000, self.animate)
 
     def slide_in(self):
-        # Move down from the top (-self.pet_size) to y=0
+        # Move down from the top (-self.pet_size) to y=0 slowly
         cur_x = self.root.winfo_x()
         cur_y = self.root.winfo_y()
         target_y = 0
         if cur_y < target_y:
-            next_y = min(target_y, cur_y + 8)  # move 8px down
+            next_y = min(target_y, cur_y + 3)  # move 3px down per frame (slow & smooth)
             self.root.geometry(f"+{cur_x}+{next_y}")
-            self.root.after(15, self.slide_in)
+            self.root.after(20, self.slide_in)
         else:
             # Reached target y=0, start background routines
             self.root.geometry(f"+{cur_x}+{target_y}")
@@ -245,6 +245,8 @@ class PetApp:
             # Start idle bobbing animation
             self.bounce_dir = 1
             self.animate()
+            # Automatically pop out a greeting notification
+            self.manual_greet()
 
     def trigger_exit(self):
         if not self.is_exiting:
@@ -263,9 +265,9 @@ class PetApp:
         cur_y = self.root.winfo_y()
         target_y = -self.pet_size
         if cur_y > target_y:
-            next_y = max(target_y, cur_y - 10)  # slide up slightly faster for exit
+            next_y = max(target_y, cur_y - 3)  # slide up slowly
             self.root.geometry(f"+{cur_x}+{next_y}")
-            self.root.after(15, self.slide_out)
+            self.root.after(20, self.slide_out)
         else:
             self.root.destroy()
 
