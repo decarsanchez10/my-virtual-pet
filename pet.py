@@ -148,7 +148,7 @@ class PetApp:
         if self.pet_image:
             self.pet_size = self.pet_image.width()
             self.x = screen_w - self.pet_size - 100
-            self.y = 0
+            self.y = -self.pet_size  # Start completely off-screen at the top
             self.root.geometry(f"{self.pet_size}x{self.pet_size}+{self.x}+{self.y}")
 
             self.label = tk.Label(
@@ -180,23 +180,27 @@ class PetApp:
         # Drag to move
         self.label.bind("<ButtonPress-1>", self.start_drag)
         self.label.bind("<B1-Motion>", self.do_drag)
-        # Right-click to quit
-        self.label.bind("<Button-3>", lambda e: self.root.destroy())
+        # Right-click to quit (trigger slide out if image, otherwise close immediately)
+        self.label.bind("<Button-3>", lambda e: self.trigger_exit() if self.pet_image else self.root.destroy())
         # Double click for a manual check-in message
         self.label.bind("<Double-Button-1>", lambda e: self.manual_greet())
 
         self.bubble = None
         self._drag_offset = (0, 0)
         self.is_dragging = False
+        self.is_exiting = False
 
-        # Background scheduler thread
         self.state = load_state()
-        t = threading.Thread(target=self.scheduler_loop, daemon=True)
-        t.start()
 
-        # Idle bobbing/bounce animation
-        self.bounce_dir = 1
-        self.animate()
+        if self.pet_image:
+            # Start sliding in from the top
+            self.root.after(200, self.slide_in)
+        else:
+            # Emoji fallback: start scheduler and bobbing immediately
+            t = threading.Thread(target=self.scheduler_loop, daemon=True)
+            t.start()
+            self.bounce_dir = 1
+            self.animate()
 
     def start_drag(self, event):
         self.is_dragging = True
@@ -206,8 +210,8 @@ class PetApp:
         x = self.root.winfo_pointerx() - self._drag_offset[0]
         y = self.root.winfo_pointery() - self._drag_offset[1]
         self.root.geometry(f"+{x}+{y}")
-        # When dragging is completed (or during), we want to make sure
-        # is_dragging is cleared on release
+        # Update self.x so that if the user drags the pet, it will slide straight up from its new location
+        self.x = x
         self.label.bind("<ButtonRelease-1>", self.stop_drag)
 
     def stop_drag(self, event):
@@ -215,13 +219,55 @@ class PetApp:
 
     def animate(self):
         # Gentle bobbing up and down like hanging on a web
-        if not self.is_dragging:
+        if not self.is_dragging and not self.is_exiting:
             self.bounce_dir = -self.bounce_dir
             cur_x = self.root.winfo_x()
             cur_y = self.root.winfo_y()
             new_y = cur_y + (self.bounce_dir * 4)
             self.root.geometry(f"+{cur_x}+{new_y}")
         self.root.after(1000, self.animate)
+
+    def slide_in(self):
+        # Move down from the top (-self.pet_size) to y=0
+        cur_x = self.root.winfo_x()
+        cur_y = self.root.winfo_y()
+        target_y = 0
+        if cur_y < target_y:
+            next_y = min(target_y, cur_y + 8)  # move 8px down
+            self.root.geometry(f"+{cur_x}+{next_y}")
+            self.root.after(15, self.slide_in)
+        else:
+            # Reached target y=0, start background routines
+            self.root.geometry(f"+{cur_x}+{target_y}")
+            # Start background scheduler thread
+            t = threading.Thread(target=self.scheduler_loop, daemon=True)
+            t.start()
+            # Start idle bobbing animation
+            self.bounce_dir = 1
+            self.animate()
+
+    def trigger_exit(self):
+        if not self.is_exiting:
+            self.is_exiting = True
+            self.slide_out()
+
+    def slide_out(self):
+        # Stop animations and dismiss speech bubble if active
+        if self.bubble is not None:
+            try:
+                self.bubble.destroy()
+            except Exception:
+                pass
+
+        cur_x = self.root.winfo_x()
+        cur_y = self.root.winfo_y()
+        target_y = -self.pet_size
+        if cur_y > target_y:
+            next_y = max(target_y, cur_y - 10)  # slide up slightly faster for exit
+            self.root.geometry(f"+{cur_x}+{next_y}")
+            self.root.after(15, self.slide_out)
+        else:
+            self.root.destroy()
 
     def show_bubble(self, text):
         if self.bubble is not None:
