@@ -104,29 +104,66 @@ class PetApp:
     def __init__(self, config):
         self.config = config
         self.root = tk.Tk()
+        
+        # Transparent key color (fuchsia avoids cutting out black outlines)
+        self.trans_color = "#ff00ff"
         self.root.overrideredirect(True)  # no window border
         self.root.wm_attributes("-topmost", True)
-        self.root.wm_attributes("-transparentcolor", "black")
-        self.root.configure(bg="black")
+        self.root.wm_attributes("-transparentcolor", self.trans_color)
+        self.root.configure(bg=self.trans_color)
+
+        # Look for image path in config or check if default spiderman.png exists
+        image_path = config.get("pet_image", "")
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        if not image_path:
+            potential_default = os.path.join(script_dir, "spiderman.png")
+            if os.path.exists(potential_default):
+                image_path = potential_default
+        else:
+            if not os.path.isabs(image_path):
+                image_path = os.path.join(script_dir, image_path)
+
+        self.pet_image = None
+        if image_path and os.path.exists(image_path):
+            try:
+                self.pet_image = tk.PhotoImage(file=image_path)
+            except Exception as e:
+                print(f"[Error loading image] {e}")
 
         screen_w = self.root.winfo_screenwidth()
         screen_h = self.root.winfo_screenheight()
-        self.pet_size = 90
-        self.x = screen_w - self.pet_size - 40
-        self.y = screen_h - self.pet_size - 100
-        self.root.geometry(f"{self.pet_size}x{self.pet_size}+{self.x}+{self.y}")
 
-        self.label = tk.Label(
-            self.root,
-            text=config.get("pet_emoji", "🐣"),
-            font=("Segoe UI Emoji", 46),
-            bg="#fff9eb",
-            fg="white",
-            highlightbackground="#ffd166",
-            highlightthickness=2,
-            bd=0,
-        )
-        self.label.pack(expand=True, fill="both", padx=5, pady=5)
+        if self.pet_image:
+            self.pet_size = self.pet_image.width()
+            self.x = screen_w - self.pet_size - 100
+            self.y = 0
+            self.root.geometry(f"{self.pet_size}x{self.pet_size}+{self.x}+{self.y}")
+
+            self.label = tk.Label(
+                self.root,
+                image=self.pet_image,
+                bg=self.trans_color,
+                bd=0,
+                highlightthickness=0,
+            )
+            self.label.pack(expand=True, fill="both")
+        else:
+            self.pet_size = 90
+            self.x = screen_w - self.pet_size - 40
+            self.y = screen_h - self.pet_size - 100
+            self.root.geometry(f"{self.pet_size}x{self.pet_size}+{self.x}+{self.y}")
+
+            self.label = tk.Label(
+                self.root,
+                text=config.get("pet_emoji", "🐣"),
+                font=("Segoe UI Emoji", 46),
+                bg="#fff9eb",
+                fg="white",
+                highlightbackground="#ffd166",
+                highlightthickness=2,
+                bd=0,
+            )
+            self.label.pack(expand=True, fill="both", padx=5, pady=5)
 
         # Drag to move
         self.label.bind("<ButtonPress-1>", self.start_drag)
@@ -138,29 +175,41 @@ class PetApp:
 
         self.bubble = None
         self._drag_offset = (0, 0)
+        self.is_dragging = False
 
         # Background scheduler thread
         self.state = load_state()
         t = threading.Thread(target=self.scheduler_loop, daemon=True)
         t.start()
 
-        # Idle bounce animation
+        # Idle bobbing/bounce animation
         self.bounce_dir = 1
         self.animate()
 
     def start_drag(self, event):
-        self._drag_offset = (event.x + self.label.winfo_x(), event.y + self.label.winfo_y())
+        self.is_dragging = True
+        self._drag_offset = (event.x, event.y)
 
     def do_drag(self, event):
         x = self.root.winfo_pointerx() - self._drag_offset[0]
         y = self.root.winfo_pointery() - self._drag_offset[1]
         self.root.geometry(f"+{x}+{y}")
+        # When dragging is completed (or during), we want to make sure
+        # is_dragging is cleared on release
+        self.label.bind("<ButtonRelease-1>", self.stop_drag)
+
+    def stop_drag(self, event):
+        self.is_dragging = False
 
     def animate(self):
-        # tiny idle bounce
-        cur_y = self.root.winfo_y()
-        self.root.geometry(f"+{self.root.winfo_x()}+{cur_y}")
-        self.root.after(2000, self.animate)
+        # Gentle bobbing up and down like hanging on a web
+        if not self.is_dragging:
+            self.bounce_dir = -self.bounce_dir
+            cur_x = self.root.winfo_x()
+            cur_y = self.root.winfo_y()
+            new_y = cur_y + (self.bounce_dir * 4)
+            self.root.geometry(f"+{cur_x}+{new_y}")
+        self.root.after(1000, self.animate)
 
     def show_bubble(self, text):
         if self.bubble is not None:
@@ -175,7 +224,7 @@ class PetApp:
         bubble.wm_attributes("-topmost", True)
         bubble_w = 260
         bx = px - bubble_w - 10 if px - bubble_w - 10 > 0 else px + self.pet_size + 10
-        by = py - 10
+        by = max(10, py - 10)
         bubble.geometry(f"{bubble_w}x100+{bx}+{by}")
         bubble.configure(bg="#fff7e6")
 
